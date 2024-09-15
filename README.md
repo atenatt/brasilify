@@ -1,6 +1,6 @@
 # Brasilify 🎧🇧🇷
 
-_Sintonize no melhor do rap brasileiro enquanto o seu navegador ganha vida com cores e ritmos...!_
+_Sintonize no melhor do rap brasileiro enquanto o seu navegador ganha vida com cores e ritmos!_
 
 ## O que é o Brasilify?
 
