@@ -6,9 +6,10 @@ let isPlaying = false;
 let audioPreview = null;
 let deviceId = null;
 let playedTracks = []; // Histórico de músicas tocadas
+let progressInterval = null; // Intervalo para atualizar a barra de progresso
 
 // Definir o Client ID diretamente no código
-const clientId = 'SEU_CLIENT_ID'; // Substitua pelo seu Client ID
+const clientId = 'e5b7534a92c74641acca2e6e9a9e7245'; // Substitua pelo seu Client ID
 const redirectUri = 'http://localhost:5500/'; // Certifique-se de que este URI está registrado no Spotify
 
 // Função para obter o token de acesso do URL
@@ -104,6 +105,23 @@ window.onSpotifyWebPlaybackSDKReady = () => {
     playTrack(currentTrack);
   });
 
+  // Listener para mudanças no estado de reprodução
+  player.addListener('player_state_changed', (state) => {
+    if (!state) {
+      return;
+    }
+
+    // Verificar se a reprodução terminou
+    if (state.paused && state.position === 0 && !state.restrictions.disallow_resuming_reasons) {
+      // A faixa terminou
+      clearInterval(progressInterval);
+      progressInterval = null;
+      isPlaying = false;
+      document.getElementById('play-pause-button').innerHTML =
+        '<i class="fas fa-play"></i>';
+    }
+  });
+
   // Conectar o player
   player.connect();
 };
@@ -165,6 +183,17 @@ function updateUI(track) {
     .map((artist) => artist.name)
     .join(', ');
   setDynamicBackground(track.album.images[0].url);
+
+  // Atualizar a duração da faixa
+  if (track.preview_url) {
+    // Prévia de 30 segundos
+    document.getElementById('duration').textContent = formatTime(30000);
+  } else {
+    // Duração real da faixa
+    document.getElementById('duration').textContent = formatTime(track.duration_ms);
+  }
+  document.getElementById('current-time').textContent = '0:00';
+  document.getElementById('progress').style.width = '0%';
 }
 
 // Função para Definir o Background Dinâmico
@@ -214,6 +243,27 @@ function setupEventListeners() {
   document.getElementById('play-pause-button').addEventListener('click', () => {
     togglePlayPause();
   });
+
+  // Event listener para busca na barra de progresso
+  document.getElementById('progress-bar').addEventListener('click', (e) => {
+    const progressBar = document.getElementById('progress-bar');
+    const rect = progressBar.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const totalWidth = rect.width;
+    const clickPositionPercent = offsetX / totalWidth;
+
+    if (player && isPlaying) {
+      // Usuário Premium
+      const trackDurationMs = currentTrack.duration_ms;
+      const newPosition = trackDurationMs * clickPositionPercent;
+      player.seek(newPosition);
+    } else if (audioPreview) {
+      // Usuário Free
+      const trackDurationMs = 30000; // Prévia de 30 segundos
+      const newPosition = trackDurationMs * clickPositionPercent;
+      audioPreview.currentTime = newPosition / 1000; // Converter para segundos
+    }
+  });
 }
 
 // Função para Reproduzir a Faixa
@@ -230,6 +280,12 @@ async function playTrack(track) {
     audioPreview = null;
   }
 
+  // Limpar qualquer intervalo de progresso existente
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+  }
+
   // Verificar se o usuário é Premium
   fetch('https://api.spotify.com/v1/me', {
     headers: {
@@ -240,6 +296,12 @@ async function playTrack(track) {
     .then((data) => {
       if (data.product === 'premium') {
         // Usuário Premium - reproduzir a faixa completa
+
+        // Obter a duração da faixa
+        const trackDurationMs = track.duration_ms;
+        document.getElementById('duration').textContent = formatTime(trackDurationMs);
+        document.getElementById('current-time').textContent = '0:00';
+        document.getElementById('progress').style.width = '0%';
 
         // Reproduzir a faixa no dispositivo correto
         fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
@@ -254,6 +316,22 @@ async function playTrack(track) {
             isPlaying = true;
             document.getElementById('play-pause-button').innerHTML =
               '<i class="fas fa-pause"></i>';
+
+            // Iniciar o intervalo para atualizar a barra de progresso
+            progressInterval = setInterval(() => {
+              player.getCurrentState().then((state) => {
+                if (!state) {
+                  return;
+                }
+                const currentPosition = state.position;
+                const progressPercent = (currentPosition / trackDurationMs) * 100;
+
+                document.getElementById('current-time').textContent = formatTime(
+                  currentPosition
+                );
+                document.getElementById('progress').style.width = progressPercent + '%';
+              });
+            }, 1000);
           })
           .catch((error) => {
             console.error('Erro ao reproduzir a faixa:', error);
@@ -272,6 +350,34 @@ async function playTrack(track) {
                 isPlaying = true;
                 document.getElementById('play-pause-button').innerHTML =
                   '<i class="fas fa-pause"></i>';
+
+                // Definir a duração da prévia (30 segundos)
+                const trackDurationMs = 30000;
+                document.getElementById('duration').textContent = formatTime(
+                  trackDurationMs
+                );
+                document.getElementById('current-time').textContent = '0:00';
+                document.getElementById('progress').style.width = '0%';
+
+                // Iniciar o intervalo para atualizar a barra de progresso
+                progressInterval = setInterval(() => {
+                  const currentPosition = audioPreview.currentTime * 1000; // Converter para ms
+                  const progressPercent = (currentPosition / trackDurationMs) * 100;
+
+                  document.getElementById('current-time').textContent = formatTime(
+                    currentPosition
+                  );
+                  document.getElementById('progress').style.width = progressPercent + '%';
+                }, 1000);
+
+                // Adicionar um event listener para quando a prévia terminar
+                audioPreview.onended = () => {
+                  clearInterval(progressInterval);
+                  progressInterval = null;
+                  isPlaying = false;
+                  document.getElementById('play-pause-button').innerHTML =
+                    '<i class="fas fa-play"></i>';
+                };
               })
               .catch((error) => {
                 console.error('Erro ao reproduzir a prévia:', error);
@@ -297,27 +403,69 @@ function togglePlayPause() {
     if (audioPreview) {
       audioPreview.pause();
     }
+    // Pausar a atualização do progresso
+    if (progressInterval) {
+      clearInterval(progressInterval);
+      progressInterval = null;
+    }
     isPlaying = false;
     document.getElementById('play-pause-button').innerHTML =
       '<i class="fas fa-play"></i>';
   } else {
     // Retomar a reprodução
     if (player) {
-      player.resume();
+      player.resume().then(() => {
+        isPlaying = true;
+        document.getElementById('play-pause-button').innerHTML =
+          '<i class="fas fa-pause"></i>';
+
+        // Retomar a atualização do progresso
+        const trackDurationMs = currentTrack.duration_ms;
+        progressInterval = setInterval(() => {
+          player.getCurrentState().then((state) => {
+            if (!state) {
+              return;
+            }
+            const currentPosition = state.position;
+            const progressPercent = (currentPosition / trackDurationMs) * 100;
+
+            document.getElementById('current-time').textContent = formatTime(
+              currentPosition
+            );
+            document.getElementById('progress').style.width = progressPercent + '%';
+          });
+        }, 1000);
+      });
     }
     if (audioPreview) {
       const playPromise = audioPreview.play();
       if (playPromise !== undefined) {
-        playPromise.catch((error) => {
-          console.error('Erro ao reproduzir a prévia:', error);
-          alert(
-            'A reprodução automática foi bloqueada pelo navegador. Clique em Play para iniciar a música.'
-          );
+        playPromise.then(() => {
+          isPlaying = true;
+          document.getElementById('play-pause-button').innerHTML =
+            '<i class="fas fa-pause"></i>';
+
+          // Retomar a atualização do progresso
+          const trackDurationMs = 30000; // Prévia de 30 segundos
+          progressInterval = setInterval(() => {
+            const currentPosition = audioPreview.currentTime * 1000; // Converter para ms
+            const progressPercent = (currentPosition / trackDurationMs) * 100;
+
+            document.getElementById('current-time').textContent = formatTime(
+              currentPosition
+            );
+            document.getElementById('progress').style.width = progressPercent + '%';
+          }, 1000);
         });
       }
     }
-    isPlaying = true;
-    document.getElementById('play-pause-button').innerHTML =
-      '<i class="fas fa-pause"></i>';
   }
+}
+
+// Função para formatar o tempo em mm:ss
+function formatTime(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
 }

@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <title>Brasilify</title>
   <link rel="stylesheet" href="styles.css">
-    <!-- Link atualizado do Font Awesome -->
-    <link
+  <!-- Link do Font Awesome -->
+  <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
     crossorigin="anonymous"
     referrerpolicy="no-referrer"
-    />
+  />
   <!-- Biblioteca Color Thief -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
   <!-- Script Principal -->
@@ -25,6 +25,14 @@
     <div id="track-info">
       <h2 id="track-name"></h2>
       <p id="artist-name"></p>
+    </div>
+    <!-- Barra de Progresso -->
+    <div id="progress-bar-container">
+      <span id="current-time">0:00</span>
+      <div id="progress-bar">
+        <div id="progress"></div>
+      </div>
+      <span id="duration">0:00</span>
     </div>
     <div id="controls">
       <button id="prev-button"><i class="fas fa-step-backward"></i></button>
