@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Brasilify</title>
+  <link rel="stylesheet" href="styles.css">
+    <!-- Link atualizado do Font Awesome -->
+    <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+    />
+  <!-- Biblioteca Color Thief -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
+  <!-- Script Principal -->
+  <script src="app.js"></script>
+</head>
+<body>
+  <!-- Player de Música -->
+  <div id="player" style="display: none;">
+    <div id="album-cover">
+      <img id="cover-image" src="" alt="Capa do Álbum">
+    </div>
+    <div id="track-info">
+      <h2 id="track-name"></h2>
+      <p id="artist-name"></p>
+    </div>
+    <div id="controls">
+      <button id="prev-button"><i class="fas fa-step-backward"></i></button>
+      <button id="play-pause-button"><i class="fas fa-play"></i></button>
+      <button id="next-button"><i class="fas fa-step-forward"></i></button>
+    </div>
+  </div>
+
+  <!-- SDK do Spotify -->
+  <script src="https://sdk.scdn.co/spotify-player.js"></script>
+</body>
+</html>
