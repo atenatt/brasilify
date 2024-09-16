@@ -7,10 +7,21 @@ let audioPreview = null;
 let deviceId = null;
 let playedTracks = [];
 let isPremiumUser = false; // Indica se o usuário é Premium
+let togglePlaylists = true; // Alternância entre playlists mainstream e underground
 
 // Definir o Client ID diretamente no código
-const clientId = 'SEU_CLIENT_ID'; // Substitua pelo seu Client ID
+const clientId = 'e5b7534a92c74641acca2e6e9a9e7245'; // Substitua pelo seu Client ID
 const redirectUri = 'http://localhost:5500/'; // Certifique-se de que este URI está registrado no Spotify
+
+// Listas de Gêneros
+const mainstreamGenres = ["rap brasileiro", "trap brasileiro", "boombap brasileiro"];  // Gêneros mainstream
+const undergroundGenres = ["rap alternativo", "rap underground brasileiro"];  // Gêneros underground
+
+// Função para alternar entre mainstream e underground
+function getGenre() {
+  togglePlaylists = !togglePlaylists;
+  return togglePlaylists ? mainstreamGenres : undergroundGenres;
+}
 
 // Função para obter o token de acesso do URL
 function getAccessToken() {
@@ -53,6 +64,8 @@ async function initializePlayer() {
   currentTrack = await getRandomTrack();
   updateUI(currentTrack);
   playTrack(currentTrack);
+  // Atualizar o botão para refletir que a música está tocando
+  updatePlayPauseButton(true); // A música vai começar tocando, então o botão deve ser "pause"
 }
 
 // Função para Definir o Background Dinâmico
@@ -85,26 +98,14 @@ function updateUI(track) {
   setDynamicBackground(track.album.images[0].url);
 }
 
-// Função para Buscar uma Faixa Aleatória de Rap Brasileiro
+// Função para Buscar uma Faixa Aleatória de Gêneros Alternados
 async function getRandomTrack() {
+  const genre = getGenre(); // Alterna entre playlists mainstream e underground
+  const genreQuery = genre[Math.floor(Math.random() * genre.length)]; // Escolhe um gênero aleatório da lista atual
+
   try {
-    const totalResponse = await fetch(
-      `https://api.spotify.com/v1/search?q=genre:%22rap%20brasileiro%22&type=track&market=BR&limit=1`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-    const totalData = await totalResponse.json();
-    const totalTracks = Math.min(totalData.tracks.total, 10000);
-
-    const limit = 50;
-    const maxOffset = Math.max(totalTracks - limit, 0);
-    const randomOffset = Math.floor(Math.random() * (maxOffset + 1));
-
     const response = await fetch(
-      `https://api.spotify.com/v1/search?q=genre:%22rap%20brasileiro%22&type=track&market=BR&limit=${limit}&offset=${randomOffset}`,
+      `https://api.spotify.com/v1/search?q=genre:%22${genreQuery}%22&type=track&market=BR&limit=50`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -163,6 +164,8 @@ async function playTrack(track) {
         // Monitorar o término da música e iniciar a próxima
         monitorTrackEnd();
       });
+      // Atualizar o botão para "pause", já que a música começou a tocar
+      updatePlayPauseButton(true);
     } else {
       alert('Prévia não disponível para esta faixa.');
     }
@@ -173,12 +176,22 @@ async function playTrack(track) {
 function togglePlayPause() {
   if (isPlaying) {
     audioPreview.pause();
-    document.getElementById('play-pause-button').innerHTML = '<i class="fas fa-play"></i>';
+    updatePlayPauseButton(false); // Atualizar o botão para "play" após pausar
   } else {
     audioPreview.play();
-    document.getElementById('play-pause-button').innerHTML = '<i class="fas fa-pause"></i>';
+    updatePlayPauseButton(true); // Atualizar o botão para "pause" após tocar
   }
   isPlaying = !isPlaying;
+}
+
+// Atualiza o ícone do botão de play/pause
+function updatePlayPauseButton(isPlaying) {
+  const playPauseButton = document.getElementById('play-pause-button');
+  if (isPlaying) {
+    playPauseButton.innerHTML = '<i class="fas fa-pause"></i>';
+  } else {
+    playPauseButton.innerHTML = '<i class="fas fa-play"></i>';
+  }
 }
 
 // Adicionar o evento de click ao botão play/pause
