@@ -82,7 +82,3 @@ Este projeto é 100% livre de licenças porque somos rebeldes sem causa. Mas, fa
 - **Você**: Por usar este aplicativo e ter paciência com nossos bugs.
 - **Café**: Por manter os desenvolvedores acordados (mesmo que sejam virtuais).
 - **Nossas Mães**: Por sempre perguntarem se já conseguimos um "emprego de verdade".
-
----
-
-Espero que este README atenda às suas expectativas e traga um sorriso ao rosto de quem o ler! Se precisar de mais alguma coisa, é só avisar. 🎶
