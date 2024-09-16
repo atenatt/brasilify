@@ -6,6 +6,7 @@ let isPlaying = false;
 let audioPreview = null;
 let deviceId = null;
 let playedTracks = []; // Histórico de músicas tocadas
+let isPremiumUser = false; // Indica se o usuário é Premium
 
 // Definir o Client ID diretamente no código
 const clientId = 'SEU_CLIENT_ID_AQUI'; // Substitua pelo seu Client ID
@@ -216,108 +217,133 @@ function setupEventListeners() {
   });
 }
 
-// Função para Reproduzir a Faixa
-async function playTrack(track) {
-  // Pausar o player do Spotify, se estiver tocando
-  if (player && isPlaying) {
-    await player.pause();
+// Função para Pausar a Reprodução Atual
+async function pausePlayback() {
+  if (isPremiumUser && player) {
+    await player.pause().catch((error) => {
+      console.error('Erro ao pausar o player:', error);
+    });
+  } else if (!isPremiumUser && audioPreview) {
+    audioPreview.pause();
   }
 
-  // Pausar e redefinir o audioPreview, se estiver tocando
-  if (audioPreview && !audioPreview.paused) {
+  isPlaying = false;
+}
+
+// Função para Retomar a Reprodução
+async function resumePlayback() {
+  if (isPremiumUser && player) {
+    await player.resume().then(() => {
+      isPlaying = true;
+      document.getElementById('play-pause-button').innerHTML =
+        '<i class="fas fa-pause"></i>';
+    }).catch((error) => {
+      console.error('Erro ao retomar a reprodução:', error);
+    });
+  } else if (!isPremiumUser && audioPreview) {
+    audioPreview.play().then(() => {
+      isPlaying = true;
+      document.getElementById('play-pause-button').innerHTML =
+        '<i class="fas fa-pause"></i>';
+    }).catch((error) => {
+      console.error('Erro ao retomar a prévia:', error);
+      alert(
+        'A reprodução automática foi bloqueada pelo navegador. Clique em Play para iniciar a música.'
+      );
+    });
+  }
+}
+
+// Função para Parar a Reprodução Atual
+async function stopPlayback() {
+  if (isPremiumUser && player) {
+    await player.pause().catch((error) => {
+      console.error('Erro ao pausar o player:', error);
+    });
+    // Não redefinimos o player para manter a conexão
+  } else if (!isPremiumUser && audioPreview) {
     audioPreview.pause();
     audioPreview.currentTime = 0;
     audioPreview = null;
   }
 
+  isPlaying = false;
+}
+
+// Função para Reproduzir a Faixa
+async function playTrack(track) {
+  // Parar qualquer reprodução atual antes de iniciar a nova
+  await stopPlayback();
+
   // Verificar se o usuário é Premium
-  fetch('https://api.spotify.com/v1/me', {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.product === 'premium') {
-        // Usuário Premium - reproduzir a faixa completa
+  try {
+    const response = await fetch('https://api.spotify.com/v1/me', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    const data = await response.json();
+
+    isPremiumUser = data.product === 'premium'; // Definir o status do usuário
+
+    if (isPremiumUser) {
+      // Usuário Premium - reproduzir a faixa completa
+      try {
+        // Garantir que audioPreview está nulo
+        audioPreview = null;
 
         // Reproduzir a faixa no dispositivo correto
-        fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+        await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
           method: 'PUT',
           body: JSON.stringify({ uris: [track.uri] }),
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${accessToken}`,
           },
-        })
-          .then(() => {
-            isPlaying = true;
-            document.getElementById('play-pause-button').innerHTML =
-              '<i class="fas fa-pause"></i>';
-          })
-          .catch((error) => {
-            console.error('Erro ao reproduzir a faixa:', error);
-            alert(
-              'Não foi possível reproduzir a faixa. Verifique se o Spotify está aberto em algum dispositivo.'
-            );
-          });
-      } else {
-        // Usuário Free - reproduzir a prévia de 30 segundos
-        if (track.preview_url) {
-          audioPreview = new Audio(track.preview_url);
-          const playPromise = audioPreview.play();
-          if (playPromise !== undefined) {
-            playPromise
-              .then(() => {
-                isPlaying = true;
-                document.getElementById('play-pause-button').innerHTML =
-                  '<i class="fas fa-pause"></i>';
-              })
-              .catch((error) => {
-                console.error('Erro ao reproduzir a prévia:', error);
-                alert(
-                  'A reprodução automática foi bloqueada pelo navegador. Clique em Play para iniciar a música.'
-                );
-              });
-          }
-        } else {
-          alert('Prévia não disponível para esta faixa.');
-        }
-      }
-    });
-}
+        });
 
-// Função para Pausar/Reproduzir
-function togglePlayPause() {
-  if (isPlaying) {
-    // Pausar a reprodução
-    if (player) {
-      player.pause();
-    }
-    if (audioPreview) {
-      audioPreview.pause();
-    }
-    isPlaying = false;
-    document.getElementById('play-pause-button').innerHTML =
-      '<i class="fas fa-play"></i>';
-  } else {
-    // Retomar a reprodução
-    if (player) {
-      player.resume();
-    }
-    if (audioPreview) {
-      const playPromise = audioPreview.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((error) => {
+        isPlaying = true;
+        document.getElementById('play-pause-button').innerHTML =
+          '<i class="fas fa-pause"></i>';
+      } catch (error) {
+        console.error('Erro ao reproduzir a faixa:', error);
+        alert(
+          'Não foi possível reproduzir a faixa. Verifique se o Spotify está aberto em algum dispositivo.'
+        );
+      }
+    } else {
+      // Usuário Free - reproduzir a prévia de 30 segundos
+      if (track.preview_url) {
+        // Garantir que player está nulo
+        player = null;
+
+        audioPreview = new Audio(track.preview_url);
+        audioPreview.play().then(() => {
+          isPlaying = true;
+          document.getElementById('play-pause-button').innerHTML =
+            '<i class="fas fa-pause"></i>';
+        }).catch((error) => {
           console.error('Erro ao reproduzir a prévia:', error);
           alert(
             'A reprodução automática foi bloqueada pelo navegador. Clique em Play para iniciar a música.'
           );
         });
+      } else {
+        alert('Prévia não disponível para esta faixa.');
       }
     }
-    isPlaying = true;
+  } catch (error) {
+    console.error('Erro ao verificar o status do usuário:', error);
+  }
+}
+
+// Função para Pausar/Reproduzir
+function togglePlayPause() {
+  if (isPlaying) {
+    pausePlayback();
     document.getElementById('play-pause-button').innerHTML =
-      '<i class="fas fa-pause"></i>';
+      '<i class="fas fa-play"></i>';
+  } else {
+    resumePlayback();
   }
 }
