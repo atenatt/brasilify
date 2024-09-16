@@ -5,20 +5,12 @@
   box-sizing: border-box;
 }
 
-/* Estilo do html e body */
-html, body {
-  overflow: hidden;
-  width: 100%;
-  height: 100%;
-}
-
 body {
   font-family: Arial, sans-serif;
   background-size: cover;
   background-position: center;
   transition: background-color 0.5s, color 0.5s;
-  color: white; /* Valor padrão */
-  text-align: center;
+  color: white;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -46,10 +38,10 @@ body {
 
 #cover-image {
   width: 100%;
-  max-width: 500px; /* Aumentado para 500px */
+  max-width: 500px;
   height: auto;
   border-radius: 10px;
-  margin-bottom: 20px; /* Adicionada margem abaixo da imagem */
+  margin-bottom: 20px;
 }
 
 /* Informações da Faixa */
@@ -80,38 +72,28 @@ body {
   background-color: transparent;
   border: none;
   color: inherit;
-  font-size: 2em;
-  margin: 0 15px;
+  font-size: 3em; /* Aumentando o tamanho do botão */
   cursor: pointer;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
 }
 
 #controls button:hover {
   color: rgba(255, 255, 255, 0.7);
 }
 
-#controls button:focus {
-  outline: none;
-}
-
-#controls i {
-  pointer-events: none;
-}
-
 /* Responsividade */
 @media (max-width: 800px) {
   #cover-image {
-    max-width: 400px; /* Ajuste para telas médias */
+    max-width: 400px;
   }
 }
 
 @media (max-width: 600px) {
   #cover-image {
-    max-width: 300px; /* Ajuste para telas pequenas */
+    max-width: 300px;
   }
 
   #controls button {
-    font-size: 1.5em;
+    font-size: 2.5em;
   }
 }
 
@@ -121,8 +103,7 @@ body {
   }
 
   #controls button {
-    font-size: 1.5em;
-    margin: 0 10px;
+    font-size: 2.5em;
   }
 }
 
@@ -132,7 +113,6 @@ body {
   }
 
   #controls button {
-    font-size: 1.2em;
-    margin: 0 8px;
+    font-size: 2em;
   }
 }

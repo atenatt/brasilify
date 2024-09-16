@@ -5,11 +5,11 @@ let currentTrack = null;
 let isPlaying = false;
 let audioPreview = null;
 let deviceId = null;
-let playedTracks = []; // Histórico de músicas tocadas
+let playedTracks = [];
 let isPremiumUser = false; // Indica se o usuário é Premium
 
 // Definir o Client ID diretamente no código
-const clientId = 'SEU_CLIENT_ID_AQUI'; // Substitua pelo seu Client ID
+const clientId = 'SEU_CLIENT_ID'; // Substitua pelo seu Client ID
 const redirectUri = 'http://localhost:5500/'; // Certifique-se de que este URI está registrado no Spotify
 
 // Função para obter o token de acesso do URL
@@ -44,128 +44,15 @@ window.onload = async () => {
     document.getElementById('player').style.display = 'block';
     await initializePlayer();
   } else {
-    // Se não houver token, iniciar o processo de autenticação
     authorize();
   }
 };
 
 // Função para Inicializar o Player
 async function initializePlayer() {
-  // Configurar os botões de controle
-  setupEventListeners();
-
-  // Obter uma faixa aleatória
   currentTrack = await getRandomTrack();
   updateUI(currentTrack);
-}
-
-// Definir window.onSpotifyWebPlaybackSDKReady fora de qualquer função
-window.onSpotifyWebPlaybackSDKReady = () => {
-  const token = accessToken;
-  player = new Spotify.Player({
-    name: 'Brasilify Player',
-    getOAuthToken: (cb) => {
-      cb(token);
-    },
-  });
-
-  // Listener para erros
-  player.addListener('initialization_error', ({ message }) => {
-    console.error(message);
-  });
-  player.addListener('authentication_error', ({ message }) => {
-    console.error(message);
-  });
-  player.addListener('account_error', ({ message }) => {
-    console.error(message);
-  });
-  player.addListener('playback_error', ({ message }) => {
-    console.error(message);
-  });
-
-  // Listener para quando o player estiver pronto
-  player.addListener('ready', async ({ device_id }) => {
-    console.log('Player está pronto com Device ID', device_id);
-    deviceId = device_id;
-
-    // Transferir a reprodução para o novo dispositivo
-    await fetch(`https://api.spotify.com/v1/me/player`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        device_ids: [deviceId],
-        play: false,
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    // Tentar reproduzir a faixa automaticamente
-    playTrack(currentTrack);
-  });
-
-  // Conectar o player
-  player.connect();
-};
-
-// Função para Buscar uma Faixa Aleatória de Rap Brasileiro
-async function getRandomTrack() {
-  // Primeiro, obter o número total de resultados
-  const totalResponse = await fetch(
-    `https://api.spotify.com/v1/search?q=genre:%22rap%20brasileiro%22&type=track&market=BR&limit=1`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
-  const totalData = await totalResponse.json();
-  const totalTracks = Math.min(totalData.tracks.total, 10000); // Limite máximo de 10.000
-
-  // Gerar um offset aleatório
-  const limit = 50;
-  const maxOffset = Math.max(totalTracks - limit, 0);
-  const randomOffset = Math.floor(Math.random() * (maxOffset + 1));
-
-  // Fazer a requisição com o offset aleatório
-  const response = await fetch(
-    `https://api.spotify.com/v1/search?q=genre:%22rap%20brasileiro%22&type=track&market=BR&limit=${limit}&offset=${randomOffset}`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
-  const data = await response.json();
-  let tracks = data.tracks.items;
-
-  // Filtrar as faixas já tocadas
-  tracks = tracks.filter((track) => !playedTracks.includes(track.id));
-
-  // Se todas as músicas já foram tocadas, resetar o histórico
-  if (tracks.length === 0) {
-    playedTracks = [];
-    return getRandomTrack(); // Chamar a função novamente
-  }
-
-  // Selecionar uma faixa aleatória do conjunto obtido
-  const selectedTrack = tracks[Math.floor(Math.random() * tracks.length)];
-
-  // Adicionar a faixa ao histórico de tocadas
-  playedTracks.push(selectedTrack.id);
-
-  return selectedTrack;
-}
-
-// Função para Atualizar a Interface do Usuário
-function updateUI(track) {
-  document.getElementById('cover-image').src = track.album.images[0].url;
-  document.getElementById('track-name').textContent = track.name;
-  document.getElementById('artist-name').textContent = track.artists
-    .map((artist) => artist.name)
-    .join(', ');
-  setDynamicBackground(track.album.images[0].url);
+  playTrack(currentTrack);
 }
 
 // Função para Definir o Background Dinâmico
@@ -176,174 +63,142 @@ function setDynamicBackground(imageUrl) {
   img.onload = () => {
     const colorThief = new ColorThief();
     const dominantColor = colorThief.getColor(img);
-    const [r, g, b] = dominantColor;
-    document.body.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
 
-    // Calcular o brilho da cor dominante
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    if (!document.body.classList.contains('light-theme') && !document.body.classList.contains('dark-theme')) {
+      document.body.style.backgroundColor = `rgb(${dominantColor[0]}, ${dominantColor[1]}, ${dominantColor[2]})`;
+    }
 
-    // Determinar a cor do texto com base no brilho
+    const brightness = (dominantColor[0] * 299 + dominantColor[1] * 587 + dominantColor[2] * 114) / 1000;
     const textColor = brightness > 125 ? 'black' : 'white';
 
-    // Aplicar a cor do texto ao corpo
     document.body.style.color = textColor;
-
-    // Atualizar a cor dos títulos e textos
     document.getElementById('track-name').style.color = textColor;
     document.getElementById('artist-name').style.color = textColor;
-
-    // Atualizar a cor dos ícones dos botões
-    const controls = document.querySelectorAll('#controls button');
-    controls.forEach((button) => {
-      button.style.color = textColor;
-    });
   };
 }
 
-// Função para Configurar os Eventos dos Botões
-function setupEventListeners() {
-  document.getElementById('next-button').addEventListener('click', async () => {
-    currentTrack = await getRandomTrack();
-    updateUI(currentTrack);
-    playTrack(currentTrack);
-  });
-
-  document.getElementById('prev-button').addEventListener('click', () => {
-    alert('Função não implementada.');
-  });
-
-  document.getElementById('play-pause-button').addEventListener('click', () => {
-    togglePlayPause();
-  });
+// Função para Atualizar a Interface do Usuário
+function updateUI(track) {
+  document.getElementById('cover-image').src = track.album.images[0].url;
+  document.getElementById('track-name').textContent = track.name;
+  document.getElementById('artist-name').textContent = track.artists.map(artist => artist.name).join(', ');
+  setDynamicBackground(track.album.images[0].url);
 }
 
-// Função para Pausar a Reprodução Atual
-async function pausePlayback() {
-  if (isPremiumUser && player) {
-    await player.pause().catch((error) => {
-      console.error('Erro ao pausar o player:', error);
-    });
-  } else if (!isPremiumUser && audioPreview) {
-    audioPreview.pause();
+// Função para Buscar uma Faixa Aleatória de Rap Brasileiro
+async function getRandomTrack() {
+  try {
+    const totalResponse = await fetch(
+      `https://api.spotify.com/v1/search?q=genre:%22rap%20brasileiro%22&type=track&market=BR&limit=1`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+    const totalData = await totalResponse.json();
+    const totalTracks = Math.min(totalData.tracks.total, 10000);
+
+    const limit = 50;
+    const maxOffset = Math.max(totalTracks - limit, 0);
+    const randomOffset = Math.floor(Math.random() * (maxOffset + 1));
+
+    const response = await fetch(
+      `https://api.spotify.com/v1/search?q=genre:%22rap%20brasileiro%22&type=track&market=BR&limit=${limit}&offset=${randomOffset}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+    const data = await response.json();
+    let tracks = data.tracks.items;
+
+    tracks = tracks.filter(track => !playedTracks.includes(track.id));
+
+    if (tracks.length === 0) {
+      playedTracks = [];
+      return getRandomTrack();
+    }
+
+    const selectedTrack = tracks[Math.floor(Math.random() * tracks.length)];
+    playedTracks.push(selectedTrack.id);
+    return selectedTrack;
+  } catch (error) {
+    alert('Erro ao carregar faixa. Por favor, tente novamente.');
+    console.error('Erro ao buscar faixa:', error);
   }
-
-  isPlaying = false;
-}
-
-// Função para Retomar a Reprodução
-async function resumePlayback() {
-  if (isPremiumUser && player) {
-    await player.resume().then(() => {
-      isPlaying = true;
-      document.getElementById('play-pause-button').innerHTML =
-        '<i class="fas fa-pause"></i>';
-    }).catch((error) => {
-      console.error('Erro ao retomar a reprodução:', error);
-    });
-  } else if (!isPremiumUser && audioPreview) {
-    audioPreview.play().then(() => {
-      isPlaying = true;
-      document.getElementById('play-pause-button').innerHTML =
-        '<i class="fas fa-pause"></i>';
-    }).catch((error) => {
-      console.error('Erro ao retomar a prévia:', error);
-      alert(
-        'A reprodução automática foi bloqueada pelo navegador. Clique em Play para iniciar a música.'
-      );
-    });
-  }
-}
-
-// Função para Parar a Reprodução Atual
-async function stopPlayback() {
-  if (isPremiumUser && player) {
-    await player.pause().catch((error) => {
-      console.error('Erro ao pausar o player:', error);
-    });
-    // Não redefinimos o player para manter a conexão
-  } else if (!isPremiumUser && audioPreview) {
-    audioPreview.pause();
-    audioPreview.currentTime = 0;
-    audioPreview = null;
-  }
-
-  isPlaying = false;
 }
 
 // Função para Reproduzir a Faixa
 async function playTrack(track) {
-  // Parar qualquer reprodução atual antes de iniciar a nova
-  await stopPlayback();
+  const response = await fetch('https://api.spotify.com/v1/me', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  const data = await response.json();
 
-  // Verificar se o usuário é Premium
-  try {
-    const response = await fetch('https://api.spotify.com/v1/me', {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-    const data = await response.json();
+  isPremiumUser = data.product === 'premium';
 
-    isPremiumUser = data.product === 'premium'; // Definir o status do usuário
-
-    if (isPremiumUser) {
-      // Usuário Premium - reproduzir a faixa completa
-      try {
-        // Garantir que audioPreview está nulo
-        audioPreview = null;
-
-        // Reproduzir a faixa no dispositivo correto
-        await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-          method: 'PUT',
-          body: JSON.stringify({ uris: [track.uri] }),
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-
-        isPlaying = true;
-        document.getElementById('play-pause-button').innerHTML =
-          '<i class="fas fa-pause"></i>';
-      } catch (error) {
-        console.error('Erro ao reproduzir a faixa:', error);
-        alert(
-          'Não foi possível reproduzir a faixa. Verifique se o Spotify está aberto em algum dispositivo.'
-        );
-      }
-    } else {
-      // Usuário Free - reproduzir a prévia de 30 segundos
-      if (track.preview_url) {
-        // Garantir que player está nulo
-        player = null;
-
-        audioPreview = new Audio(track.preview_url);
-        audioPreview.play().then(() => {
-          isPlaying = true;
-          document.getElementById('play-pause-button').innerHTML =
-            '<i class="fas fa-pause"></i>';
-        }).catch((error) => {
-          console.error('Erro ao reproduzir a prévia:', error);
-          alert(
-            'A reprodução automática foi bloqueada pelo navegador. Clique em Play para iniciar a música.'
-          );
-        });
-      } else {
-        alert('Prévia não disponível para esta faixa.');
-      }
+  if (isPremiumUser) {
+    try {
+      await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ uris: [track.uri] }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      // Monitorar o término da música e iniciar a próxima
+      monitorTrackEnd();
+    } catch (error) {
+      console.error('Erro ao reproduzir a faixa:', error);
     }
-  } catch (error) {
-    console.error('Erro ao verificar o status do usuário:', error);
+  } else {
+    if (track.preview_url) {
+      audioPreview = new Audio(track.preview_url);
+      audioPreview.play().then(() => {
+        // Monitorar o término da música e iniciar a próxima
+        monitorTrackEnd();
+      });
+    } else {
+      alert('Prévia não disponível para esta faixa.');
+    }
   }
 }
 
-// Função para Pausar/Reproduzir
+// Função para alternar o ícone de play/pause
 function togglePlayPause() {
   if (isPlaying) {
-    pausePlayback();
-    document.getElementById('play-pause-button').innerHTML =
-      '<i class="fas fa-play"></i>';
+    audioPreview.pause();
+    document.getElementById('play-pause-button').innerHTML = '<i class="fas fa-play"></i>';
   } else {
-    resumePlayback();
+    audioPreview.play();
+    document.getElementById('play-pause-button').innerHTML = '<i class="fas fa-pause"></i>';
+  }
+  isPlaying = !isPlaying;
+}
+
+// Adicionar o evento de click ao botão play/pause
+document.getElementById('play-pause-button').addEventListener('click', () => {
+  if (audioPreview) {
+    togglePlayPause();
+  } else {
+    playTrack(currentTrack); // Iniciar a faixa se ainda não estiver tocando
+  }
+});
+
+// Função para monitorar o término da faixa e iniciar a próxima
+function monitorTrackEnd() {
+  if (isPremiumUser) {
+    // Aqui, se necessário, pode-se adicionar lógica para premium users também, mas o Spotify SDK geralmente cuida disso
+  } else if (audioPreview) {
+    audioPreview.onended = async () => {
+      currentTrack = await getRandomTrack();
+      updateUI(currentTrack);
+      playTrack(currentTrack);
+    };
   }
 }
