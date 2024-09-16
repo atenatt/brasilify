@@ -46,9 +46,10 @@ body {
 
 #cover-image {
   width: 100%;
-  max-width: 400px;
+  max-width: 500px; /* Aumentado para 500px */
   height: auto;
   border-radius: 10px;
+  margin-bottom: 20px; /* Adicionada margem abaixo da imagem */
 }
 
 /* Informações da Faixa */
@@ -98,9 +99,25 @@ body {
 }
 
 /* Responsividade */
+@media (max-width: 800px) {
+  #cover-image {
+    max-width: 400px; /* Ajuste para telas médias */
+  }
+}
+
+@media (max-width: 600px) {
+  #cover-image {
+    max-width: 300px; /* Ajuste para telas pequenas */
+  }
+
+  #controls button {
+    font-size: 1.5em;
+  }
+}
+
 @media (max-height: 800px) {
   #cover-image {
-    max-height: 300px;
+    max-height: 400px;
   }
 
   #controls button {
@@ -111,21 +128,11 @@ body {
 
 @media (max-height: 600px) {
   #cover-image {
-    max-height: 200px;
+    max-height: 300px;
   }
 
   #controls button {
     font-size: 1.2em;
     margin: 0 8px;
-  }
-}
-
-@media (max-width: 600px) {
-  #cover-image {
-    max-width: 300px;
-  }
-
-  #controls button {
-    font-size: 1.5em;
   }
 }
