@@ -6,7 +6,7 @@ _Sintonize no melhor do rap brasileiro enquanto o seu navegador ganha vida com c
 
 Bem-vindo ao **Brasilify**, o player de música que ninguém sabia que precisava! Este é o lugar onde o rap brasileiro encontra a tecnologia de ponta (ou pelo menos tentamos). Prepare-se para uma experiência musical que vai fazer o seu navegador dançar mais do que você!
 
-**Nota Especial**: Este projeto foi desenvolvido 100% com a utilização do **ChatGPT o1-preview**. Sim, até mesmo este README foi escrito por uma inteligência artificial tentando ser engraçada!
+**Nota Especial**: Este projeto foi desenvolvido 100% com a utilização do **ChatGPT o1**. Sim, até mesmo este README foi escrito por uma inteligência artificial tentando ser engraçada!
 
 ## Características Incríveis (ou nem tanto)
 
